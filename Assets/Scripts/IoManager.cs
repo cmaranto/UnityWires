@@ -1,32 +1,26 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
 
 public class IoManager : MonoBehaviour
 {
+    public GameObject ioPrefab;
+    public GameObject componentBase;
+    public GameObject ioDialogPrefab;
+    public Canvas canvas;
     private static IoManager m_instance;
-    public GameObject ioDialog;
-    public TMP_InputField ioDialogNameInput;
-    public Slider ioDialogValue;
-    public Button ioDialogOkButton;
-    public GameObject canvas;
-    public Io currentIo;
-    public Io currentIoTarget;
-    private GameObject wire;
-    private LineRenderer wireRenderer;
-    public Color wireNotConnectedColor = Color.red;
+    private static List<Io> m_inputs = new List<Io>();
+    private static List<Io> m_outputs = new List<Io>();
+
+    public Io currentIoTarget = null;
+    public Io currentIo = null;
+
+    public bool wiring = false;
     public Color wireConnectedColor = Color.green;
-    private Color wireColor;
-
-    // Start is called before the first frame update
-    void Start()
-    {
-        m_instance = this;
-
-        ioDialogOkButton.onClick.AddListener(onOkButtonClicked);
-    }
+    public Color wireNotConnectedColor = Color.red;
+    private GameObject wire = null;
+    private List<GameObject> wires = new List<GameObject>();
+    private LineRenderer wireRenderer = null;
 
     public static IoManager instance{
         get{
@@ -40,48 +34,91 @@ public class IoManager : MonoBehaviour
         }
     }
 
+        // Start is called before the first frame update
+    void Start()
+    {
+        m_instance = this;
+    }
+
     // Update is called once per frame 
     void Update()
     {
-        if(currentIo){
-            if(currentIo.wiring){
-                if (Input.GetMouseButtonUp(0)){
-                    currentIo.wiring = false;
-                    GameObject.Destroy(wire);
+        if(Input.GetMouseButtonUp(0)){
+            if(wiring)stopWiring();
+        }
+        if(wiring){
+            updateNewWire(currentIo.gameObject.transform.position,Camera.main.ScreenToWorldPoint(Input.mousePosition),
+                        currentIoTarget ? wireConnectedColor : wireNotConnectedColor);
+        }
+    }
 
+    public void createInput(){
+        Io input = Instantiate(ioPrefab, new Vector3(0,0,0),Quaternion.identity).GetComponent<Io>();
+        input.allowInput = false;
+        input.allowOutput = true;
+        input.tag = "Inputs";
+        input.name = "Input";
+        m_inputs.Add(input);
+        align();
+        updateWires();
+    }
 
-                }else{
-                    drawWire(currentIo.gameObject.transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition),
-                    currentIoTarget == null || currentIoTarget == currentIo ? wireNotConnectedColor : wireConnectedColor);
-                }   
-            }
+    public void createOutput(){
+        Io output = Instantiate(ioPrefab, new Vector3(0,0,0),Quaternion.identity).GetComponent<Io>();
+        output.allowInput = true;
+        output.allowOutput = false;
+        output.tag = "Outputs";
+        output.name = "Output";
+        m_outputs.Add(output);
+        align(false);
+        updateWires();
+    }
 
-            if(currentIo.moving){
-                if(Input.GetMouseButtonUp(1)){
-                    currentIo.moving = false;
-                }else{
-                    Vector2 cameraPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-                    currentIo.gameObject.transform.SetPositionAndRotation(cameraPos,Quaternion.identity);
-                }
-                
-            }
+    void align(bool left = true){
+        Bounds baseBounds = componentBase.GetComponent<Collider2D>().bounds;
+        float xPos = componentBase.transform.position.x - baseBounds.size.x/2.0f;
+        if(!left)xPos = Mathf.Abs(xPos);
+        float count = left ? (float)m_inputs.Count + 1 : (float)m_outputs.Count + 1;
+        float yInterval = baseBounds.size.y / count;
+        int idx = 1;
+        foreach(Io io in (left ? m_inputs : m_outputs)){
+            Vector3 pos = new Vector3(xPos,baseBounds.size.y/2 - yInterval*idx++,0);
+            io.gameObject.transform.SetPositionAndRotation(pos,Quaternion.identity);
         }
     }
 
     public void startWiring(){
-        wire = new GameObject();
-        wire.transform.position = Vector3.ProjectOnPlane(currentIo.gameObject.transform.position,Vector3.forward);
-        wire.AddComponent<LineRenderer>();
-
+        wiring = true;
+        wire = createWire(Vector3.zero,Vector3.zero);
         wireRenderer = wire.GetComponent<LineRenderer>();
-        wireRenderer.material = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
-        wireRenderer.startWidth = 0.1f;
-        wireRenderer.endWidth = 0.1f;
-        wireRenderer.startColor = wireNotConnectedColor;
-        wireRenderer.endColor = wireNotConnectedColor;
     }
 
-    public void drawWire(Vector3 start, Vector3 end, Color color){
+    private GameObject createWire(Vector3 start, Vector3 stop){
+        GameObject w = new GameObject();
+        LineRenderer wR = w.AddComponent<LineRenderer>();
+        wR.material = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
+        wR.startWidth = 0.1f;
+        wR.endWidth = 0.1f;
+        wR.startColor = Color.white;
+        wR.endColor = Color.white;
+        wR.SetPosition(0,start);
+        wR.SetPosition(1,stop);
+        return w;
+    }
+
+    public void stopWiring(){
+        wiring = false;
+        GameObject.Destroy(wire); 
+
+        currentIo.outputConnection = currentIoTarget;
+        if(currentIoTarget)currentIoTarget.inputConnection = currentIo;
+
+        updateWires();
+
+        currentIo = null;       
+    }
+
+    void updateNewWire(Vector3 start, Vector3 end, Color color){
         wireRenderer.startColor = color;
         wireRenderer.endColor = color;
 
@@ -89,24 +126,33 @@ public class IoManager : MonoBehaviour
         wireRenderer.SetPosition(1, Vector3.ProjectOnPlane(end,Vector3.forward));
     }
 
-    public void showDialog(){
+    void updateWires(){
+        foreach(GameObject obj in wires){
+            GameObject.Destroy(obj);
+        }
+        wires.Clear();
+
+        foreach(Io input in m_inputs){
+            if(input.outputConnection){
+                wires.Add(createWire(input.gameObject.transform.position,
+                                        input.outputConnection.gameObject.transform.position));
+            }
+        }
+    }
+
+    public void showIoDialog(Io io){
+        GameObject dialog = Instantiate(ioDialogPrefab, Vector3.zero,Quaternion.identity);
+        dialog.transform.SetParent(canvas.transform,false);
+        IoDialogManager manager = dialog.GetComponent<IoDialogManager>();
         RectTransform CanvasRect=canvas.GetComponent<RectTransform>();
-        RectTransform DialogRect=ioDialog.GetComponent<RectTransform>();
- 
-        Vector2 ViewportPosition=Camera.main.WorldToViewportPoint(currentIo.gameObject.transform.position);
+        RectTransform DialogRect=dialog.GetComponent<RectTransform>();        
+
+        Vector2 ViewportPosition=Camera.main.WorldToViewportPoint(io.gameObject.transform.position);
         Vector2 pos =  new Vector2(
         ((ViewportPosition.x*CanvasRect.sizeDelta.x)-(CanvasRect.sizeDelta.x*0.5f)),
         ((ViewportPosition.y*CanvasRect.sizeDelta.y)-(CanvasRect.sizeDelta.y*0.5f)) + 100);
         DialogRect.anchoredPosition = pos;
 
-        ioDialogNameInput.SetTextWithoutNotify(currentIo.ioName);
-        ioDialogValue.SetValueWithoutNotify(currentIo.value ? 1.0f : 0.0f);
-        ioDialog.SetActive(true);
-    }
-
-    public void onOkButtonClicked(){
-        currentIo.ioName = ioDialogNameInput.text;
-        currentIo.value = ioDialogValue.value == 0.0f ? false : true;
-        ioDialog.SetActive(false);
+        manager.setIo(io);
     }
 }
