@@ -27,6 +27,9 @@ public class CreateButton : MonoBehaviour
             case 1://output
                 IoManager.instance.createOutput();
                 break;
+            default://modules
+                IoManager.instance.createModule(createOption.value - 2);
+                break;
         }
     }
 }

@@ -457,7 +457,6 @@ GameObject:
   - component: {fileID: 519420032}
   - component: {fileID: 519420031}
   - component: {fileID: 519420029}
-  - component: {fileID: 519420030}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -473,27 +472,6 @@ AudioListener:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 519420028}
   m_Enabled: 1
---- !u!114 &519420030
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 519420028}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4ea8231480387e019e6025dbd55ed78, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ioPrefab: {fileID: 5010405375495817478, guid: 9be3f5bd5e7e08be0b94658be7a5a818, type: 3}
-  componentBase: {fileID: 967830847}
-  ioDialogPrefab: {fileID: 4718095879101830804, guid: 37ab48ab44821e98d9eadf98c6fde96f, type: 3}
-  canvas: {fileID: 696321812}
-  currentIoTarget: {fileID: 0}
-  currentIo: {fileID: 0}
-  wiring: 0
-  wireConnectedColor: {r: 0, g: 1, b: 0, a: 1}
-  wireNotConnectedColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!20 &519420031
 Camera:
   m_ObjectHideFlags: 0
@@ -999,9 +977,8 @@ GameObject:
   m_Component:
   - component: {fileID: 967830848}
   - component: {fileID: 967830849}
-  - component: {fileID: 967830850}
-  m_Layer: 0
-  m_Name: Base
+  m_Layer: 8
+  m_Name: MainBase
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1015,11 +992,11 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 967830847}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -3.9558096, y: -0.6374842, z: 10.411749}
   m_LocalScale: {x: 13.998953, y: 6.571255, z: 1}
   m_Children: []
-  m_Father: {fileID: 0}
-  m_RootOrder: 3
+  m_Father: {fileID: 1615884249}
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &967830849
 SpriteRenderer:
@@ -1072,32 +1049,6 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!61 &967830850
-BoxCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 967830847}
-  m_Enabled: 1
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_UsedByEffector: 0
-  m_UsedByComposite: 0
-  m_Offset: {x: 0, y: 0}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
-    newSize: {x: 1, y: 1}
-    adaptiveTilingThreshold: 0.5
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  serializedVersion: 2
-  m_Size: {x: 1, y: 1}
-  m_EdgeRadius: 0
 --- !u!1 &1218878436
 GameObject:
   m_ObjectHideFlags: 0
@@ -1404,6 +1355,10 @@ MonoBehaviour:
       m_Image: {fileID: 0}
     - m_Text: Output
       m_Image: {fileID: 0}
+    - m_Text: Relay (default on)
+      m_Image: {fileID: 0}
+    - m_Text: Relay (default off)
+      m_Image: {fileID: 0}
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -1655,6 +1610,60 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1502261970}
   m_CullTransparentMesh: 1
+--- !u!1 &1615884247
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1615884249}
+  - component: {fileID: 1615884248}
+  m_Layer: 0
+  m_Name: IoManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1615884248
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1615884247}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4ea8231480387e019e6025dbd55ed78, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ioPrefab: {fileID: 5010405375495817478, guid: 9be3f5bd5e7e08be0b94658be7a5a818, type: 3}
+  moduleBase: {fileID: 967830847}
+  ioDialogPrefab: {fileID: 4718095879101830804, guid: 37ab48ab44821e98d9eadf98c6fde96f, type: 3}
+  modulePrefab: {fileID: 6888766264860995940, guid: 1011893cc97023b48a6ea07ba28af703, type: 3}
+  canvas: {fileID: 696321812}
+  currentIoTarget: {fileID: 0}
+  currentIo: {fileID: 0}
+  wiring: 0
+  wireConnectedColor: {r: 0, g: 1, b: 0, a: 1}
+  wireNotConnectedColor: {r: 1, g: 0, b: 0, a: 1}
+--- !u!4 &1615884249
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1615884247}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 3.9558096, y: 0.6374842, z: -10.411749}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children:
+  - {fileID: 967830848}
+  m_Father: {fileID: 0}
+  m_RootOrder: 3
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1637628184
 GameObject:
   m_ObjectHideFlags: 0

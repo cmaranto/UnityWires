@@ -46,9 +46,9 @@ CircleCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0, y: 0}
+  m_Offset: {x: 0.00000008940697, y: 0}
   serializedVersion: 2
-  m_Radius: 0.5
+  m_Radius: 0.2557713
 --- !u!114 &4006923751665533129
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -73,7 +73,7 @@ GameObject:
   - component: {fileID: 717042464191621267}
   - component: {fileID: 8268003494795358303}
   m_Layer: 0
-  m_Name: Circle
+  m_Name: IoCircle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -157,7 +157,7 @@ GameObject:
   - component: {fileID: 7538026163020769174}
   - component: {fileID: 8837004999909556479}
   m_Layer: 0
-  m_Name: Label
+  m_Name: IoLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

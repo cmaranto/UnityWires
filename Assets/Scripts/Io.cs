@@ -33,14 +33,13 @@ public class Io : MonoBehaviour
     }
 
     public TMP_Text nameText;
-    private string m_ioName;
+    private string m_ioName = "I/O";
     public string ioName
     {
         get { return m_ioName; }
         set
         {
-            m_ioName = value;
-            name = value;      
+            m_ioName = value; 
             updateNameText();      
         }
     }
@@ -67,7 +66,6 @@ public class Io : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        ioName = name;
     }
 
     // Update is called once per frame

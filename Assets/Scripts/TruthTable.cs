@@ -1,17 +1,25 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
+using System.Collections.ObjectModel;
 using System;
+using System.Text;
+using UnityEngine;
 public class TruthTable
 {
-    private int m_inputCount = 0;
-    public int inputCount{
-        get{return m_inputCount;}
+    private List<string> m_inputNames;
+    public ReadOnlyCollection<string> inputNames{
+        get{return m_inputNames.AsReadOnly();}
+    }
+    private List<string> m_outputNames;
+    public ReadOnlyCollection<string> outputNames{
+        get{return m_outputNames.AsReadOnly();}
     }
 
-    private int m_outputCount = 0;
     public int outputCount{
-        get{return m_outputCount;}
+        get{return m_outputNames.Count;}
+    }
+    public int inputCount{
+        get{return m_inputNames.Count;}
     }
 
     public int outputMax{
@@ -24,13 +32,15 @@ public class TruthTable
 
     
     private Dictionary<int,int> m_map = new Dictionary<int, int>();
+    
 
-    public TruthTable(int inputs, int outputs){
-        m_inputCount = inputs;
-        m_outputCount = outputs;
+    public TruthTable(List<string> inputNames, List<string> outputNames){
+        m_inputNames = inputNames;
+        m_outputNames = outputNames;
         for(int i = 0; i < inputMax; i++){
             m_map[i] = 0;
         }
+        
     }
 
     public bool map(int input, int output){
@@ -45,15 +55,69 @@ public class TruthTable
         return true;
     }
 
-    public bool map(BitVector32 input, BitVector32 output){
-        return map(input.Data,output.Data);
+    public bool map(BitArray input, BitArray output){
+        return map(bitsToInt(input),bitsToInt(output));
     }
 
     int output(int input){
         return m_map[input];
     }
 
-    BitVector32 output(BitVector32 input){
-        return new BitVector32(output(input.Data));
+    BitArray output(BitArray input){
+        return intToBits(output(bitsToInt(input)));
     }
+
+    public static int bitsToInt(BitArray bits){
+        int [] array = new int[1];
+        bits.CopyTo(array,0);
+        return array[0];
+    }
+
+    public static BitArray intToBits(int val){
+        return new BitArray(new int[1]{val});
+    }
+
+    public static int boolToInt(bool val){
+        return val ? 1 : 0;
+    }
+
+    public static string ToBitString(BitArray bits)
+    {
+        var sb = new StringBuilder();
+
+        for (int i = 0; i < bits.Count; i++)
+        {
+            char c = bits[i] ? '1' : '0';
+            sb.Append(c);
+        }
+
+        return sb.ToString();
+    }
+
+    public override string ToString(){
+        StringBuilder sb = new StringBuilder();
+        String cellFormat = "{0,-5}";
+        //header   
+        for(int i = 0; i < inputCount + outputCount; ++i){            
+            sb.AppendFormat(cellFormat, i < inputCount ? inputNames[i] : outputNames[inputCount - i]);
+        }
+        sb.Append("\n");
+        //values
+        for(int y = 0; y < inputMax; ++y){
+            BitArray inputBits = intToBits(y);
+            BitArray outputBits = output(inputBits);
+            for(int i = 0; i < inputCount + outputCount; ++i){
+                int iIdx = inputCount - i - 1;
+                int oIdx = outputCount - (i - inputCount) - 1;
+
+                sb.AppendFormat(cellFormat, i < inputCount ? boolToInt(inputBits[iIdx])
+                    : boolToInt(outputBits[oIdx]));
+            }
+            sb.Append("\n");
+        }
+
+        return sb.ToString();
+    }
+
+
 }
