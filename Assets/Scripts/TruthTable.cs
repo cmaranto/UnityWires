@@ -59,11 +59,11 @@ public class TruthTable
         return map(bitsToInt(input),bitsToInt(output));
     }
 
-    int output(int input){
+    public int output(int input){
         return m_map[input];
     }
 
-    BitArray output(BitArray input){
+    public BitArray output(BitArray input){
         return intToBits(output(bitsToInt(input)));
     }
 

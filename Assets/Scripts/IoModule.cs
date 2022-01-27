@@ -75,6 +75,21 @@ public class IoModule : MonoBehaviour
         }
     }
 
+    void setOutput(){
+        bool[] inputValues = new bool[m_module.truthTable.inputCount];
+        for(int i = 0; i < m_module.truthTable.inputCount; ++i){
+            inputValues[i] = m_inputs[i].inputValue;
+        }
+        BitArray outputValues = m_module.truthTable.output(new BitArray(inputValues));
+        for(int i = 0; i < m_module.truthTable.outputCount; ++i){
+            m_outputs[i].inputValue = outputValues[m_module.truthTable.outputCount - i - 1];
+        }
+    }
+
+    void onInputChanged(){
+        setOutput();
+    }
+
     public void load(string filename)
     {
 
@@ -88,6 +103,7 @@ public class IoModule : MonoBehaviour
         input.allowInput = true;
         input.allowOutput = false;
         input.ioName = ioName;
+        input.inputChangedEvent.AddListener(onInputChanged);
         m_inputs.Add(input);
         align();
     }

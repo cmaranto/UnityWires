@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using TMPro;
 
 public class Io : MonoBehaviour
@@ -17,12 +18,18 @@ public class Io : MonoBehaviour
         set{m_allowOutput = value;}
     }
 
+    public UnityEvent inputChangedEvent = new UnityEvent();
+    public UnityEvent outputChangedEvent = new UnityEvent();
+
 
     private Io m_inputConnection;
     public Io inputConnection
     {
         get { return m_inputConnection; }
-        set { m_inputConnection = value; }
+        set { 
+            m_inputConnection = value;
+            m_inputConnection.inputChangedEvent.AddListener(onInputChanged);
+        }
     }
 
     private Io m_outputConnection;
@@ -53,7 +60,10 @@ public class Io : MonoBehaviour
                 return m_inputValue;
             }
         }
-        set{m_inputValue = value;}
+        set{
+            m_inputValue = value;
+            inputChangedEvent.Invoke();
+        }
     }
 
     public int inputValueInt{
@@ -101,5 +111,13 @@ public class Io : MonoBehaviour
             IoManager.instance.currentIo = this;
             IoManager.instance.startWiring();
         }
+    }
+
+    void onInputChanged(){
+        inputChangedEvent.Invoke();
+    }
+
+    void onOutputChanged(){
+        outputChangedEvent.Invoke();
     }
 }
