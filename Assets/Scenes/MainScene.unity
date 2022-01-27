@@ -1643,12 +1643,15 @@ MonoBehaviour:
   moduleBase: {fileID: 967830847}
   ioDialogPrefab: {fileID: 4718095879101830804, guid: 37ab48ab44821e98d9eadf98c6fde96f, type: 3}
   modulePrefab: {fileID: 6888766264860995940, guid: 1011893cc97023b48a6ea07ba28af703, type: 3}
+  moduleDialogPrefab: {fileID: 3732509627648497059, guid: f9f0897355cf35d519c8fadfea3dbb82, type: 3}
   canvas: {fileID: 696321812}
   currentIoTarget: {fileID: 0}
   currentIo: {fileID: 0}
   wiring: 0
   wireConnectedColor: {r: 0, g: 1, b: 0, a: 1}
   wireNotConnectedColor: {r: 1, g: 0, b: 0, a: 1}
+  wireOnColor: {r: 1, g: 1, b: 1, a: 1}
+  wireOffColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
 --- !u!4 &1615884249
 Transform:
   m_ObjectHideFlags: 0

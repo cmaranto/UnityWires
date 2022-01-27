@@ -3,51 +3,134 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System;
 using System.Text;
+using System.Linq;
 using UnityEngine;
+
+public class IntBits
+{
+    bool[] m_bits;
+    int m_count;
+    public int count
+    {
+        get { return m_count; }
+    }
+    public bool[] bits
+    {
+        get { return m_bits; }
+    }
+
+    public bool this[int i]
+    {
+        get { return m_bits[i]; }
+        set { m_bits[i] = value; }
+    }
+
+    int valueFromBits()
+    {
+        return Convert.ToInt32(ToString(),2);
+    }
+
+    void bitsFromValue(int value)
+    {
+        bool[] n = Convert.ToString(value, 2).PadLeft(count,'0').Select(s => s.Equals('1')).ToArray();
+        for (int i = 0; i < count; ++i)
+        {
+            if (i >= n.Length)
+            {
+                m_bits[i] = false;
+            }
+            else
+            {
+                m_bits[i] = n[i];
+            }
+        }
+    }
+
+    public int value
+    {
+        get { return valueFromBits(); }
+        set { bitsFromValue(value); }
+    }
+
+    public IntBits(int _count, int _value = 0)
+    {
+        m_count = _count;
+        m_bits = new bool[_count];
+        bitsFromValue(_value);
+    }
+
+    public IntBits(bool[] _bits)
+    {
+        m_bits = _bits;
+        m_count = m_bits.Length;
+    }
+
+    public override string ToString()
+    {
+        string s = "";
+        for(int i = 0; i < count; ++i){
+            s += bits[i] ? "1" : "0";
+        }
+        return s;
+    }
+
+
+
+}
 public class TruthTable
 {
     private List<string> m_inputNames;
-    public ReadOnlyCollection<string> inputNames{
-        get{return m_inputNames.AsReadOnly();}
+    public ReadOnlyCollection<string> inputNames
+    {
+        get { return m_inputNames.AsReadOnly(); }
     }
     private List<string> m_outputNames;
-    public ReadOnlyCollection<string> outputNames{
-        get{return m_outputNames.AsReadOnly();}
+    public ReadOnlyCollection<string> outputNames
+    {
+        get { return m_outputNames.AsReadOnly(); }
     }
 
-    public int outputCount{
-        get{return m_outputNames.Count;}
+    public int outputCount
+    {
+        get { return m_outputNames.Count; }
     }
-    public int inputCount{
-        get{return m_inputNames.Count;}
-    }
-
-    public int outputMax{
-        get{return (int)Math.Pow(2,outputCount);}
+    public int inputCount
+    {
+        get { return m_inputNames.Count; }
     }
 
-    public int inputMax{
-        get{return (int)Math.Pow(2,inputCount);}
+    public int outputMax
+    {
+        get { return (int)Math.Pow(2, outputCount); }
     }
 
-    
-    private Dictionary<int,int> m_map = new Dictionary<int, int>();
-    
+    public int inputMax
+    {
+        get { return (int)Math.Pow(2, inputCount); }
+    }
 
-    public TruthTable(List<string> inputNames, List<string> outputNames){
+
+    private Dictionary<int, int> m_map = new Dictionary<int, int>();
+
+
+    public TruthTable(List<string> inputNames, List<string> outputNames)
+    {
         m_inputNames = inputNames;
         m_outputNames = outputNames;
-        for(int i = 0; i < inputMax; i++){
+        for (int i = 0; i < inputMax; i++)
+        {
             m_map[i] = 0;
         }
-        
     }
 
-    public bool map(int input, int output){
-        if(input < 0 || input >= inputMax){
+    public bool map(int input, int output)
+    {
+        if (input < 0 || input >= inputMax)
+        {
             return false;
         }
-        if(output < 0 || input >= outputMax){
+        if (output < 0 || output >= outputMax)
+        {
             return false;
         }
 
@@ -55,63 +138,46 @@ public class TruthTable
         return true;
     }
 
-    public bool map(BitArray input, BitArray output){
-        return map(bitsToInt(input),bitsToInt(output));
+    public bool map(IntBits inputs, IntBits outputs)
+    {        
+        return map(inputs.value, outputs.value);
     }
 
-    public int output(int input){
+    public int output(int input)
+    {
         return m_map[input];
     }
 
-    public BitArray output(BitArray input){
-        return intToBits(output(bitsToInt(input)));
+    public IntBits output(IntBits inputs)
+    {
+        return new IntBits(outputCount, output(inputs.value));
     }
 
-    public static int bitsToInt(BitArray bits){
-        int [] array = new int[1];
-        bits.CopyTo(array,0);
-        return array[0];
-    }
-
-    public static BitArray intToBits(int val){
-        return new BitArray(new int[1]{val});
-    }
-
-    public static int boolToInt(bool val){
+    public static int boolToInt(bool val)
+    {
         return val ? 1 : 0;
     }
 
-    public static string ToBitString(BitArray bits)
+    public override string ToString()
     {
-        var sb = new StringBuilder();
-
-        for (int i = 0; i < bits.Count; i++)
-        {
-            char c = bits[i] ? '1' : '0';
-            sb.Append(c);
-        }
-
-        return sb.ToString();
-    }
-
-    public override string ToString(){
         StringBuilder sb = new StringBuilder();
         String cellFormat = "{0,-5}";
         //header   
-        for(int i = 0; i < inputCount + outputCount; ++i){            
+        for (int i = 0; i < inputCount + outputCount; ++i)
+        {
             sb.AppendFormat(cellFormat, i < inputCount ? inputNames[i] : outputNames[inputCount - i]);
         }
         sb.Append("\n");
+        sb.Append("----------\n");
         //values
-        for(int y = 0; y < inputMax; ++y){
-            BitArray inputBits = intToBits(y);
-            BitArray outputBits = output(inputBits);
-            for(int i = 0; i < inputCount + outputCount; ++i){
-                int iIdx = inputCount - i - 1;
-                int oIdx = outputCount - (i - inputCount) - 1;
-
-                sb.AppendFormat(cellFormat, i < inputCount ? boolToInt(inputBits[iIdx])
-                    : boolToInt(outputBits[oIdx]));
+        for (int y = 0; y < inputMax; ++y)
+        {
+            IntBits inputBits = new IntBits(inputCount, y);
+            IntBits outputBits = new IntBits(outputCount, output(inputBits.value));
+            for (int i = 0; i < inputCount + outputCount; ++i)
+            {
+                sb.AppendFormat(cellFormat, i < inputCount ? boolToInt(inputBits[i])
+                    : boolToInt(outputBits[inputCount - i]));
             }
             sb.Append("\n");
         }

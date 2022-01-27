@@ -2,7 +2,10 @@ using System.Collections;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using TMPro;
+using System.Text;
+using System;
 
 public class IoModuleData
 {
@@ -38,7 +41,12 @@ public class IoModule : MonoBehaviour
         get{return m_outputs.AsReadOnly();}
     }
 
-    private IoModuleData m_module;
+    public UnityEvent outputEvent = new UnityEvent();
+
+    private IoModuleData m_moduleData;
+    public IoModuleData moduleData{
+        get{return m_moduleData;}
+    }
 
     // Start is called before the first frame update
 
@@ -58,36 +66,49 @@ public class IoModule : MonoBehaviour
         IoManager.instance.updateWires();
     }
 
-    public void init(IoModuleData moduleData)
-    {
-        m_module = moduleData;
-        m_inputs = new List<Io>(m_module.truthTable.inputCount);
-        m_outputs = new List<Io>(m_module.truthTable.outputCount);
-        nameText.SetText(m_module.ioName);     
-
-        for (int i = 0; i < m_module.truthTable.outputCount; i++)
-        {
-            createOutput(m_module.truthTable.outputNames[i]);
-        }
-        for (int i = 0; i < m_module.truthTable.inputCount; i++)
-        {
-            createInput(m_module.truthTable.inputNames[i]);
+    void OnMouseOver(){
+        if(Input.GetMouseButtonDown(1)){
+            OnRightClick();
         }
     }
 
-    void setOutput(){
-        bool[] inputValues = new bool[m_module.truthTable.inputCount];
-        for(int i = 0; i < m_module.truthTable.inputCount; ++i){
-            inputValues[i] = m_inputs[i].inputValue;
+    void OnRightClick(){
+        IoManager.instance.showModuleDialog(this);
+    }
+    
+    public void init(IoModuleData moduleData)
+    {
+        m_moduleData = moduleData;
+        m_inputs = new List<Io>(m_moduleData.truthTable.inputCount);
+        m_outputs = new List<Io>(m_moduleData.truthTable.outputCount);
+        nameText.SetText(m_moduleData.ioName);     
+
+        for (int i = 0; i < m_moduleData.truthTable.outputCount; i++)
+        {
+            createOutput(m_moduleData.truthTable.outputNames[i]);
         }
-        BitArray outputValues = m_module.truthTable.output(new BitArray(inputValues));
-        for(int i = 0; i < m_module.truthTable.outputCount; ++i){
-            m_outputs[i].inputValue = outputValues[m_module.truthTable.outputCount - i - 1];
+        for (int i = 0; i < m_moduleData.truthTable.inputCount; i++)
+        {
+            createInput(m_moduleData.truthTable.inputNames[i]);
         }
+        setOutputs();
+    }
+
+    void setOutputs(){
+        bool[] inputValues = new bool[m_moduleData.truthTable.inputCount];
+        for(int i = 0; i < m_moduleData.truthTable.inputCount; ++i){
+            inputValues[i] = m_inputs[i].value;
+        }
+        IntBits inputBits = new IntBits(inputValues);
+        IntBits outputBits = new IntBits(m_moduleData.truthTable.output(inputBits).bits);
+        for(int i = 0; i < m_moduleData.truthTable.outputCount; ++i){
+            m_outputs[i].value = outputBits[m_moduleData.truthTable.outputCount - i - 1];
+        }
+        outputEvent.Invoke();
     }
 
     void onInputChanged(){
-        setOutput();
+        setOutputs();
     }
 
     public void load(string filename)
@@ -100,10 +121,9 @@ public class IoModule : MonoBehaviour
         GameObject go = Instantiate(ioPrefab, new Vector3(0, 0, 0), Quaternion.identity);
         go.transform.parent = gameObject.transform;
         Io input = go.GetComponentInChildren<Io>();
-        input.allowInput = true;
-        input.allowOutput = false;
+        input.type = Io.Type.Input;
         input.ioName = ioName;
-        input.inputChangedEvent.AddListener(onInputChanged);
+        input.valueChangedEvent.AddListener(onInputChanged);
         m_inputs.Add(input);
         align();
     }
@@ -113,8 +133,7 @@ public class IoModule : MonoBehaviour
         GameObject go = Instantiate(ioPrefab, new Vector3(0, 0, 0), Quaternion.identity);
         go.transform.parent = gameObject.transform;
         Io output = go.GetComponentInChildren<Io>();
-        output.allowInput = false;
-        output.allowOutput = true;
+        output.type = Io.Type.Output;
         output.ioName = ioName;
         m_outputs.Add(output);
         align(false);
@@ -133,5 +152,18 @@ public class IoModule : MonoBehaviour
             Vector3 pos = new Vector3(xPos, baseBounds.size.y / 2 - yInterval * idx++, 0);
             io.gameObject.transform.SetPositionAndRotation(pos, Quaternion.identity);
         }
+    }
+
+    public string ioTableString(){
+        StringBuilder sb = new StringBuilder();
+        sb.AppendFormat("{0,-10}{1,10}\n","Inputs","Ouputs");
+        sb.Append("--------------------\n");
+        string cellFormat = "{0,-10}{1,10}\n"; 
+        for(int i = 0; i < Math.Max(moduleData.truthTable.inputCount,moduleData.truthTable.outputCount); ++i){            
+            sb.AppendFormat(cellFormat,i < moduleData.truthTable.inputCount ? inputs[i].ToString() : "          ",
+                                        i < moduleData.truthTable.outputCount ? outputs[i].ToString() : "          ");
+        }
+
+        return sb.ToString();
     }
 }

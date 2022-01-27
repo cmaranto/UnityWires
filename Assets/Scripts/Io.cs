@@ -7,36 +7,30 @@ using TMPro;
 
 public class Io : MonoBehaviour
 {
-    private bool m_allowInput = true;
-    public bool allowInput{
-        get{return m_allowInput;}
-        set{m_allowInput = value;}
+
+    public enum Type{
+        Input,
+        Output,
+        StaticInput,
+        StaticOutput
     }
-    private bool m_allowOutput = true;
-    public bool allowOutput{
-        get{return m_allowOutput;}
-        set{m_allowOutput = value;}
+    private Type m_type = Type.Input;
+    public Type type{
+        get{return m_type;}
+        set{m_type = value;}
     }
 
-    public UnityEvent inputChangedEvent = new UnityEvent();
-    public UnityEvent outputChangedEvent = new UnityEvent();
-
-
-    private Io m_inputConnection;
-    public Io inputConnection
+    private Io m_connection;
+    public Io connection
     {
-        get { return m_inputConnection; }
+        get { return m_connection; }
         set { 
-            m_inputConnection = value;
-            m_inputConnection.inputChangedEvent.AddListener(onInputChanged);
+            m_connection = value;
+            if(type == Type.Input || type == Type.StaticOutput){
+                if(m_connection)m_connection.valueChangedEvent.AddListener(onValueChanged);
+            }
+            onValueChanged();
         }
-    }
-
-    private Io m_outputConnection;
-    public Io outputConnection
-    {
-        get { return m_outputConnection; }
-        set { m_outputConnection = value; }
     }
 
     public TMP_Text nameText;
@@ -51,27 +45,28 @@ public class Io : MonoBehaviour
         }
     }
 
-    private bool m_inputValue = false;
-    public bool inputValue{
+    public UnityEvent valueChangedEvent = new UnityEvent();
+    private bool m_value = false;
+    public bool value{
         get{
-            if(allowInput && inputConnection){
-                return inputConnection.inputValue;
+            if((type == Type.Input || type == Type.StaticOutput)){
+                return connection ? connection.value : false;
             }else{
-                return m_inputValue;
+                return m_value;
             }
         }
         set{
-            m_inputValue = value;
-            inputChangedEvent.Invoke();
+            if(type == Type.StaticInput || type == Type.Output){
+                m_value = value;
+                onValueChanged();
+            }
         }
     }
 
-    public int inputValueInt{
-        get{
-            return inputValue ? 1 : 0;
-        }
+    public override string ToString()
+    {
+        return string.Format("{0}({1})",ioName,value);
     }
-
 
     // Start is called before the first frame update
     void Start()
@@ -88,7 +83,7 @@ public class Io : MonoBehaviour
     }
 
     void OnMouseOver(){
-        if(allowInput)IoManager.instance.currentIoTarget = this;
+        if(type == Type.StaticOutput || type == Type.Input)IoManager.instance.currentIoTarget = this;
 
         if(Input.GetMouseButtonDown(1)){
             onRightClick();
@@ -99,7 +94,7 @@ public class Io : MonoBehaviour
     }
 
     void OnMouseExit(){
-        if(allowInput)IoManager.instance.currentIoTarget = null;
+        if(type == Type.StaticOutput || type == Type.Input)IoManager.instance.currentIoTarget = null;
     }
 
     void onRightClick(){
@@ -107,17 +102,13 @@ public class Io : MonoBehaviour
     }
 
     void onLeftClick(){
-        if(allowOutput && !IoManager.instance.wiring){
+        if((type == Type.StaticInput || type == Type.Output) && !IoManager.instance.wiring){
             IoManager.instance.currentIo = this;
             IoManager.instance.startWiring();
         }
     }
 
-    void onInputChanged(){
-        inputChangedEvent.Invoke();
-    }
-
-    void onOutputChanged(){
-        outputChangedEvent.Invoke();
+    void onValueChanged(){
+        valueChangedEvent.Invoke();
     }
 }

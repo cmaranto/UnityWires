@@ -9,6 +9,7 @@ public class IoManager : MonoBehaviour
     public GameObject moduleBase;
     public GameObject ioDialogPrefab;
     public GameObject modulePrefab;
+    public GameObject moduleDialogPrefab;
     public Canvas canvas;
     private static IoManager m_instance;
     private static List<Io> m_inputs = new List<Io>();
@@ -20,6 +21,8 @@ public class IoManager : MonoBehaviour
     public bool wiring = false;
     public Color wireConnectedColor = Color.green;
     public Color wireNotConnectedColor = Color.red;
+    public Color wireOnColor = Color.white;
+    public Color wireOffColor = Color.gray;
     private GameObject wire = null;
     private List<GameObject> wires = new List<GameObject>();
     private LineRenderer wireRenderer = null;
@@ -62,9 +65,9 @@ public class IoManager : MonoBehaviour
         GameObject go = Instantiate(ioPrefab, new Vector3(0, 0, 0), Quaternion.identity);
         go.transform.parent = gameObject.transform;
         Io input = go.GetComponent<Io>();
-        input.allowInput = false;
-        input.allowOutput = true;
+        input.type = Io.Type.StaticInput;
         input.ioName = "Input";
+        input.valueChangedEvent.AddListener(updateWires);
         m_inputs.Add(input);
         align();
         updateWires();
@@ -75,8 +78,7 @@ public class IoManager : MonoBehaviour
         GameObject go = Instantiate(ioPrefab, new Vector3(0, 0, 0), Quaternion.identity);
         go.transform.parent = gameObject.transform;
         Io output = go.GetComponent<Io>();
-        output.allowInput = true;
-        output.allowOutput = false;
+        output.type = Io.Type.StaticOutput;
         output.ioName = "Output";
         m_outputs.Add(output);
         align(false);
@@ -95,9 +97,10 @@ public class IoManager : MonoBehaviour
             TruthTable tt = new TruthTable(new List<string> { "A", "B" }, new List<string> { "O" });
             tt.map(0, 0);
             tt.map(1, 1);
-            tt.map(2, 1);
+            tt.map(2, 0);
             tt.map(3, 0);
             module.init(new IoModuleData("Relay(on)", tt));
+            module.outputEvent.AddListener(updateWires);
         }
         else
         {
@@ -110,6 +113,7 @@ public class IoManager : MonoBehaviour
             tt.map(2, 0);
             tt.map(3, 1);
             module.init(new IoModuleData("Relay(off)", tt));
+            module.outputEvent.AddListener(updateWires);
         }
         m_modules.Add(module);
     }
@@ -131,12 +135,18 @@ public class IoManager : MonoBehaviour
 
     public void startWiring()
     {
+        if (currentIo.connection)
+        {
+            currentIo.connection.connection = null;
+            currentIo.connection = null;
+        }
+
         wiring = true;
-        wire = createWire(Vector3.zero, Vector3.zero);
+        wire = createWire(Vector3.zero, Vector3.zero, wireNotConnectedColor);
         wireRenderer = wire.GetComponentInChildren<LineRenderer>();
     }
 
-    private GameObject createWire(Vector3 start, Vector3 stop)
+    private GameObject createWire(Vector3 start, Vector3 stop, Color color)
     {
         GameObject w = new GameObject();
         w.transform.parent = gameObject.transform;
@@ -144,8 +154,8 @@ public class IoManager : MonoBehaviour
         wR.material = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
         wR.startWidth = 0.1f;
         wR.endWidth = 0.1f;
-        wR.startColor = Color.white;
-        wR.endColor = Color.white;
+        wR.startColor = color;
+        wR.endColor = color;
         wR.SetPosition(0, start);
         wR.SetPosition(1, stop);
         return w;
@@ -156,12 +166,11 @@ public class IoManager : MonoBehaviour
         wiring = false;
         GameObject.Destroy(wire);
 
-        currentIo.outputConnection = currentIoTarget;
-        if (currentIoTarget) currentIoTarget.inputConnection = currentIo;
-
-        updateWires();
+        if (currentIoTarget) currentIoTarget.connection = currentIo;
+        currentIo.connection = currentIoTarget;
 
         currentIo = null;
+        updateWires();
     }
 
     void updateNewWire(Vector3 start, Vector3 end, Color color)
@@ -183,10 +192,11 @@ public class IoManager : MonoBehaviour
 
         foreach (Io input in m_inputs)
         {
-            if (input.outputConnection)
+            if (input.connection)
             {
                 wires.Add(createWire(input.gameObject.transform.position,
-                                        input.outputConnection.gameObject.transform.position));
+                                        input.connection.gameObject.transform.position,
+                                        input.value ? wireOnColor : wireOffColor));
             }
         }
 
@@ -194,10 +204,11 @@ public class IoManager : MonoBehaviour
         {
             foreach (Io output in module.outputs)
             {
-                if (output.outputConnection)
+                if (output.connection)
                 {
                     wires.Add(createWire(output.gameObject.transform.position,
-                            output.outputConnection.gameObject.transform.position));
+                            output.connection.gameObject.transform.position,
+                            output.value ? wireOnColor : wireOffColor));
                 }
             }
         }
@@ -214,9 +225,26 @@ public class IoManager : MonoBehaviour
         Vector2 ViewportPosition = Camera.main.WorldToViewportPoint(io.gameObject.transform.position);
         Vector2 pos = new Vector2(
         ((ViewportPosition.x * CanvasRect.sizeDelta.x) - (CanvasRect.sizeDelta.x * 0.5f)),
-        ((ViewportPosition.y * CanvasRect.sizeDelta.y) - (CanvasRect.sizeDelta.y * 0.5f)) + 100);
+        ((ViewportPosition.y * CanvasRect.sizeDelta.y) - (CanvasRect.sizeDelta.y * 0.5f)));
         DialogRect.anchoredPosition = pos;
 
         manager.setIo(io);
+    }
+
+    public void showModuleDialog(IoModule module)
+    {
+        GameObject dialog = Instantiate(moduleDialogPrefab, Vector3.zero, Quaternion.identity);
+        dialog.transform.SetParent(canvas.transform, false);
+        IoModuleDialogManager manager = dialog.GetComponent<IoModuleDialogManager>();
+        RectTransform CanvasRect = canvas.GetComponent<RectTransform>();
+        RectTransform DialogRect = dialog.GetComponent<RectTransform>();
+
+        Vector2 ViewportPosition = Camera.main.WorldToViewportPoint(module.gameObject.transform.position);
+        Vector2 pos = new Vector2(
+        ((ViewportPosition.x * CanvasRect.sizeDelta.x) - (CanvasRect.sizeDelta.x * 0.5f)),
+        ((ViewportPosition.y * CanvasRect.sizeDelta.y) - (CanvasRect.sizeDelta.y * 0.5f)));
+        DialogRect.anchoredPosition = pos;
+
+        manager.setModule(module);
     }
 }
