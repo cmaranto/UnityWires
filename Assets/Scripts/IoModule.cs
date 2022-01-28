@@ -7,22 +7,20 @@ using TMPro;
 using System.Text;
 using System;
 
+[Serializable]
 public class IoModuleData
 {
 
     public IoModuleData(string name, TruthTable tt){
-        m_ioName = name;
-        m_truthTable = tt;
+        ioName = name;
+        truthTable = tt;
     }
-    private string m_ioName;
-    public string ioName
+    public string ioName;
+    public TruthTable truthTable;
+
+    public override string ToString()
     {
-        get { return m_ioName; }
-    }
-    private TruthTable m_truthTable;
-    public TruthTable truthTable
-    {
-        get { return m_truthTable; }
+        return string.Format("{0}\n{1}",ioName,truthTable);
     }
 }
 public class IoModule : MonoBehaviour
@@ -139,6 +137,17 @@ public class IoModule : MonoBehaviour
         align(false);
     }
 
+    public void removeConnections(){
+        foreach(Io io in m_inputs){
+            if(io.incomingConnection){
+                io.incomingConnection.removeOutgoingConnection(io);
+            }
+        }
+        foreach(Io io in m_outputs){
+            io.clearOutgoingConnections();
+        }
+    }
+
     void align(bool left = true)
     {
         Bounds baseBounds = gameObject.GetComponentInChildren<SpriteRenderer>().bounds;
@@ -156,7 +165,7 @@ public class IoModule : MonoBehaviour
 
     public string ioTableString(){
         StringBuilder sb = new StringBuilder();
-        sb.AppendFormat("{0,-10}{1,10}\n","Inputs","Ouputs");
+        sb.AppendFormat("{0,-10}{1,10}\n","In","Out");
         sb.Append("--------------------\n");
         string cellFormat = "{0,-10}{1,10}\n"; 
         for(int i = 0; i < Math.Max(moduleData.truthTable.inputCount,moduleData.truthTable.outputCount); ++i){            

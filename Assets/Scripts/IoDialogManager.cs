@@ -10,11 +10,13 @@ public class IoDialogManager : MonoBehaviour
     public TMP_Text ioText;
     public Slider valueSlider;
     public Button closeButton;
+    public Button deleteButton;
     public Io io;
     // Start is called before the first frame update
     void Start()
     {
         closeButton.onClick.AddListener(onClose);
+        deleteButton.onClick.AddListener(onDelete);
         valueSlider.onValueChanged.AddListener(onValueSlider);
         nameInput.onValueChanged.AddListener(onNameChanged);
     }
@@ -39,7 +41,8 @@ public class IoDialogManager : MonoBehaviour
     }
 
     void updateValue(){
-        ioText.text = string.Format("{0}->{1}",io.ToString(),io.connection ? io.connection.ToString() : "No connection");
+        ioText.SetText(string.Format("{0}->{1}->{2}",io.incomingConnection ? io.incomingConnection.ToString() : "None",io.ToString(),
+                                                    io.outgoingConnections.Count > 0 ? string.Join(",",io.outgoingConnections) : "None"));
     }
 
     void onValueSlider(float value){
@@ -53,5 +56,10 @@ public class IoDialogManager : MonoBehaviour
 
     void onClose(){
         GameObject.Destroy(this.gameObject);
+    }
+
+    void onDelete(){
+        IoManager.instance.removeIo(io);
+        onClose();
     }
 }

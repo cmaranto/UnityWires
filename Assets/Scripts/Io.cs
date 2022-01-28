@@ -20,17 +20,40 @@ public class Io : MonoBehaviour
         set{m_type = value;}
     }
 
-    private Io m_connection;
-    public Io connection
+    private Io m_incomingConnection = null;
+    public Io incomingConnection
     {
-        get { return m_connection; }
-        set { 
-            m_connection = value;
+        get { return m_incomingConnection; }
+        set {
+            if(m_incomingConnection){
+                Io old = m_incomingConnection;
+                m_incomingConnection = null;
+                old.removeOutgoingConnection(this);
+            }
+            m_incomingConnection = value;
             if(type == Type.Input || type == Type.StaticOutput){
-                if(m_connection)m_connection.valueChangedEvent.AddListener(onValueChanged);
+                if(m_incomingConnection)m_incomingConnection.valueChangedEvent.AddListener(onValueChanged);
             }
             onValueChanged();
         }
+    }
+
+    private HashSet<Io> m_outgoingConnections = new HashSet<Io>();
+    public HashSet<Io> outgoingConnections{
+        get{return m_outgoingConnections;}
+    }
+    public void addOutgoingConnection(Io io){
+        m_outgoingConnections.Add(io);
+    }
+    public void removeOutgoingConnection(Io io){
+        io.incomingConnection = null;
+        m_outgoingConnections.Remove(io);
+    }
+    public void clearOutgoingConnections(){
+        foreach(Io io in m_outgoingConnections){
+            io.incomingConnection = null;
+        }
+        m_outgoingConnections.Clear();
     }
 
     public TMP_Text nameText;
@@ -50,7 +73,7 @@ public class Io : MonoBehaviour
     public bool value{
         get{
             if((type == Type.Input || type == Type.StaticOutput)){
-                return connection ? connection.value : false;
+                return incomingConnection ? incomingConnection.value : false;
             }else{
                 return m_value;
             }
@@ -79,7 +102,7 @@ public class Io : MonoBehaviour
     }
 
     void updateNameText(){
-        nameText.SetText(m_ioName[0].ToString());
+        if(m_ioName.Length > 0)nameText.SetText(m_ioName[0].ToString());
     }
 
     void OnMouseOver(){

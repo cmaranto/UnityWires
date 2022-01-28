@@ -9,11 +9,13 @@ public class IoModuleDialogManager : MonoBehaviour
     public TMP_Text truthTableText;
     public TMP_Text ioText;
     public Button closeButton;
+    public Button deleteButton;
     public IoModule module;
     // Start is called before the first frame update
     void Start()
     {
         closeButton.onClick.AddListener(onClose);
+        deleteButton.onClick.AddListener(onDelete);
     }
 
     // Update is called once per frame
@@ -36,5 +38,10 @@ public class IoModuleDialogManager : MonoBehaviour
 
     void onClose(){
         GameObject.Destroy(this.gameObject);
+    }
+
+    void onDelete(){
+        IoManager.instance.removeModule(module);
+        onClose();
     }
 }

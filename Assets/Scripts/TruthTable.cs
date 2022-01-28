@@ -77,26 +77,19 @@ public class IntBits
 
 
 }
+[Serializable]
 public class TruthTable
 {
-    private List<string> m_inputNames;
-    public ReadOnlyCollection<string> inputNames
-    {
-        get { return m_inputNames.AsReadOnly(); }
-    }
-    private List<string> m_outputNames;
-    public ReadOnlyCollection<string> outputNames
-    {
-        get { return m_outputNames.AsReadOnly(); }
-    }
+    public List<string> inputNames;
+    public List<string> outputNames;
 
     public int outputCount
     {
-        get { return m_outputNames.Count; }
+        get { return outputNames.Count; }
     }
     public int inputCount
     {
-        get { return m_inputNames.Count; }
+        get { return inputNames.Count; }
     }
 
     public int outputMax
@@ -110,16 +103,16 @@ public class TruthTable
     }
 
 
-    private Dictionary<int, int> m_map = new Dictionary<int, int>();
+    public List<int> outputMap;
 
-
-    public TruthTable(List<string> inputNames, List<string> outputNames)
+    public TruthTable(List<string> _inputNames, List<string> _outputNames)
     {
-        m_inputNames = inputNames;
-        m_outputNames = outputNames;
+        inputNames = _inputNames;
+        outputNames = _outputNames;
+        outputMap = new List<int>(inputMax);
         for (int i = 0; i < inputMax; i++)
         {
-            m_map[i] = 0;
+            outputMap.Add(0);
         }
     }
 
@@ -134,7 +127,7 @@ public class TruthTable
             return false;
         }
 
-        m_map[input] = output;
+        outputMap[input] = output;
         return true;
     }
 
@@ -145,7 +138,7 @@ public class TruthTable
 
     public int output(int input)
     {
-        return m_map[input];
+        return outputMap[input];
     }
 
     public IntBits output(IntBits inputs)

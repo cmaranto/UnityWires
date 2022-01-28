@@ -1,7 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.IO;
 using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
 
 public class IoManager : MonoBehaviour
 {
@@ -28,6 +31,12 @@ public class IoManager : MonoBehaviour
     private LineRenderer wireRenderer = null;
 
     private List<IoModule> m_modules = new List<IoModule>();
+    private List<IoModuleData> m_moduleData = new List<IoModuleData>();
+
+    public Button addButton;
+    public TMP_Dropdown addOption;
+    public Button saveButton;
+    public bool saving = false;
 
     public static IoManager instance
     {
@@ -41,6 +50,14 @@ public class IoManager : MonoBehaviour
     void Start()
     {
         m_instance = this;
+
+        Debug.Log(Application.persistentDataPath);
+
+        loadModules();
+        saveModules();
+
+        addButton.onClick.AddListener(onAddClick);
+        saveButton.onClick.AddListener(onSaveClick);
 
         createInput();
         createOutput();
@@ -60,6 +77,76 @@ public class IoManager : MonoBehaviour
         }
     }
 
+    void loadModules(){
+            //default off relay
+            TruthTable tt = new TruthTable(new List<string> { "A", "B" }, new List<string> { "O" });
+            tt.map(0, 0);
+            tt.map(1, 0);
+            tt.map(2, 0);
+            tt.map(3, 1);
+            m_moduleData.Add(new IoModuleData("Relay(off)", tt));
+
+
+            TruthTable tt2 = new TruthTable(new List<string> { "A", "B" }, new List<string> { "O" });
+            tt2.map(0, 0);
+            tt2.map(1, 1);
+            tt2.map(2, 0);
+            tt2.map(3, 0);
+            m_moduleData.Add(new IoModuleData("Relay(on)", tt2));
+
+            addOption.AddOptions(new List<string>{"Relay(off)","Relay(on)"});
+    }
+
+    void saveModules(){
+        string modFilename = Application.persistentDataPath + "/modules.json";
+        File.WriteAllText(modFilename,JsonUtility.ToJson(m_moduleData));
+    }
+
+    void onAddClick(){
+        switch(addOption.value){
+            case 0://input
+                createInput();
+                break;
+            case 1://output
+                createOutput();
+                break;
+            default://modules
+                createModule(addOption.value - 2);
+                break;
+        }
+    }
+
+    void onSaveClick(){
+        saving = true;
+        List<string> inputNames = new List<string>(m_inputs.Count);
+        foreach(Io input in m_inputs){
+            inputNames.Add(input.ioName);
+        }
+        List<string> outputNames = new List<string>(m_outputs.Count);
+        foreach(Io output in m_outputs){
+            outputNames.Add(output.ioName);
+        }
+        TruthTable tt = new TruthTable(inputNames,outputNames);
+        IntBits ins = new IntBits(m_inputs.Count);
+        IntBits outs = new IntBits(m_outputs.Count);
+        for(int i = 0; i < tt.inputMax; ++i){
+            ins.value = i;
+            for(int y = 0; y < ins.count; ++y){
+                m_inputs[y].value = ins[y];
+            }
+            for(int z = 0; z < outs.count; ++z){
+                outs[z] = m_outputs[z].value;
+            }
+            tt.map(ins,outs);
+        }
+
+        IoModuleData data = new IoModuleData("New Module",tt);
+
+        Debug.Log(JsonUtility.ToJson(data));
+
+        saving = false;
+    }
+
     public void createInput()
     {
         GameObject go = Instantiate(ioPrefab, new Vector3(0, 0, 0), Quaternion.identity);
@@ -67,7 +154,7 @@ public class IoManager : MonoBehaviour
         Io input = go.GetComponent<Io>();
         input.type = Io.Type.StaticInput;
         input.ioName = "Input";
-        input.valueChangedEvent.AddListener(updateWires);
+        input.valueChangedEvent.AddListener(onInputChanged);
         m_inputs.Add(input);
         align();
         updateWires();
@@ -82,40 +169,23 @@ public class IoManager : MonoBehaviour
         output.ioName = "Output";
         m_outputs.Add(output);
         align(false);
-        updateWires();
+    }
+
+    void onInputChanged(){
+        if(!saving)updateWires();
     }
 
     public void createModule(int idx)
     {
-        IoModule module;
-        GameObject go;
-        if (idx == 0)
-        {
-            //default on relay
+        if(m_moduleData.Count > idx){
+            IoModule module;
+            GameObject go;
             go = Instantiate(modulePrefab, new Vector3(0, 0, 0), Quaternion.identity);
             module = go.GetComponent<IoModule>();
-            TruthTable tt = new TruthTable(new List<string> { "A", "B" }, new List<string> { "O" });
-            tt.map(0, 0);
-            tt.map(1, 1);
-            tt.map(2, 0);
-            tt.map(3, 0);
-            module.init(new IoModuleData("Relay(on)", tt));
+            module.init(m_moduleData[idx]);
             module.outputEvent.AddListener(updateWires);
+            m_modules.Add(module);
         }
-        else
-        {
-            //default off relay
-            go = Instantiate(modulePrefab, new Vector3(0, 0, 0), Quaternion.identity);
-            module = go.GetComponent<IoModule>();
-            TruthTable tt = new TruthTable(new List<string> { "A", "B" }, new List<string> { "O" });
-            tt.map(0, 0);
-            tt.map(1, 0);
-            tt.map(2, 0);
-            tt.map(3, 1);
-            module.init(new IoModuleData("Relay(off)", tt));
-            module.outputEvent.AddListener(updateWires);
-        }
-        m_modules.Add(module);
     }
 
     void align(bool left = true)
@@ -135,12 +205,6 @@ public class IoManager : MonoBehaviour
 
     public void startWiring()
     {
-        if (currentIo.connection)
-        {
-            currentIo.connection.connection = null;
-            currentIo.connection = null;
-        }
-
         wiring = true;
         wire = createWire(Vector3.zero, Vector3.zero, wireNotConnectedColor);
         wireRenderer = wire.GetComponentInChildren<LineRenderer>();
@@ -156,6 +220,8 @@ public class IoManager : MonoBehaviour
         wR.endWidth = 0.1f;
         wR.startColor = color;
         wR.endColor = color;
+        start.z = 1;
+        stop.z =1;
         wR.SetPosition(0, start);
         wR.SetPosition(1, stop);
         return w;
@@ -166,8 +232,10 @@ public class IoManager : MonoBehaviour
         wiring = false;
         GameObject.Destroy(wire);
 
-        if (currentIoTarget) currentIoTarget.connection = currentIo;
-        currentIo.connection = currentIoTarget;
+        if (currentIoTarget){
+            currentIoTarget.incomingConnection = currentIo;
+            currentIo.addOutgoingConnection(currentIoTarget);
+        }
 
         currentIo = null;
         updateWires();
@@ -178,25 +246,22 @@ public class IoManager : MonoBehaviour
         wireRenderer.startColor = color;
         wireRenderer.endColor = color;
 
-        wireRenderer.SetPosition(0, Vector3.ProjectOnPlane(start, Vector3.forward));
-        wireRenderer.SetPosition(1, Vector3.ProjectOnPlane(end, Vector3.forward));
+        start.z = 1;
+        end.z = 1;
+        wireRenderer.SetPosition(0, start);
+        wireRenderer.SetPosition(1, end);
     }
 
     public void updateWires()
     {
-        foreach (GameObject obj in wires)
-        {
-            GameObject.Destroy(obj);
-        }
-        wires.Clear();
 
+        clearWires();
         foreach (Io input in m_inputs)
         {
-            if (input.connection)
-            {
+            foreach(Io o in input.outgoingConnections){
                 wires.Add(createWire(input.gameObject.transform.position,
-                                        input.connection.gameObject.transform.position,
-                                        input.value ? wireOnColor : wireOffColor));
+                    o.gameObject.transform.position,
+                    input.value ? wireOnColor : wireOffColor));
             }
         }
 
@@ -204,14 +269,36 @@ public class IoManager : MonoBehaviour
         {
             foreach (Io output in module.outputs)
             {
-                if (output.connection)
-                {
+                foreach(Io o in output.outgoingConnections){
                     wires.Add(createWire(output.gameObject.transform.position,
-                            output.connection.gameObject.transform.position,
-                            output.value ? wireOnColor : wireOffColor));
+                        o.gameObject.transform.position,
+                        output.value ? wireOnColor : wireOffColor));
                 }
             }
         }
+    }
+
+    public void clearWires(){
+        foreach (GameObject obj in wires)
+        {
+            GameObject.Destroy(obj);
+        }
+        wires.Clear();
+    }
+
+    public void clear(){
+        foreach(Io io in m_inputs){
+            GameObject.Destroy(io.gameObject);
+        }
+        m_inputs.Clear();
+        foreach(Io io in m_outputs){
+            GameObject.Destroy(io.gameObject);
+        }
+        m_outputs.Clear();
+        foreach(IoModule mod in m_modules){
+            GameObject.Destroy(mod.gameObject);
+        }
+        m_modules.Clear();
     }
 
     public void showIoDialog(Io io)
@@ -246,5 +333,25 @@ public class IoManager : MonoBehaviour
         DialogRect.anchoredPosition = pos;
 
         manager.setModule(module);
+    }
+
+    public void removeIo(Io io){
+        if(io.type == Io.Type.StaticInput){
+            io.clearOutgoingConnections();
+            m_inputs.Remove(io);
+            GameObject.Destroy(io.gameObject);
+        }else if(io.type == Io.Type.StaticOutput){
+            if(io.incomingConnection)io.incomingConnection.removeOutgoingConnection(io);
+            m_outputs.Remove(io);
+            GameObject.Destroy(io.gameObject);
+        }
+        updateWires();
+    }
+
+    public void removeModule(IoModule module){
+        module.removeConnections();
+        m_modules.Remove(module);
+        GameObject.Destroy(module.gameObject);
+        updateWires();
     }
 }
