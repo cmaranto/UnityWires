@@ -13,6 +13,7 @@ public class IoManager : MonoBehaviour
     public GameObject ioDialogPrefab;
     public GameObject modulePrefab;
     public GameObject moduleDialogPrefab;
+    public GameObject nameDialogPrefab;
     public Canvas canvas;
     private static IoManager m_instance;
     private static List<Io> m_inputs = new List<Io>();
@@ -36,6 +37,7 @@ public class IoManager : MonoBehaviour
     public Button addButton;
     public TMP_Dropdown addOption;
     public Button saveButton;
+    public Button clearButton;
     public bool saving = false;
 
     public static IoManager instance
@@ -58,6 +60,7 @@ public class IoManager : MonoBehaviour
 
         addButton.onClick.AddListener(onAddClick);
         saveButton.onClick.AddListener(onSaveClick);
+        clearButton.onClick.AddListener(clear);
 
         createInput();
         createOutput();
@@ -77,29 +80,22 @@ public class IoManager : MonoBehaviour
         }
     }
 
+    void addModuleData(IoModuleData _data){
+        m_moduleData.Add(_data);
+        addOption.AddOptions(new List<string>{_data.ioName});
+    }
+
     void loadModules(){
-            //default off relay
-            TruthTable tt = new TruthTable(new List<string> { "A", "B" }, new List<string> { "O" });
-            tt.map(0, 0);
-            tt.map(1, 0);
-            tt.map(2, 0);
-            tt.map(3, 1);
-            m_moduleData.Add(new IoModuleData("Relay(off)", tt));
-
-
-            TruthTable tt2 = new TruthTable(new List<string> { "A", "B" }, new List<string> { "O" });
-            tt2.map(0, 0);
-            tt2.map(1, 1);
-            tt2.map(2, 0);
-            tt2.map(3, 0);
-            m_moduleData.Add(new IoModuleData("Relay(on)", tt2));
-
-            addOption.AddOptions(new List<string>{"Relay(off)","Relay(on)"});
+        string modFilename = Application.persistentDataPath + "/modules.json";
+        IoModuleDataList l = JsonUtility.FromJson<IoModuleDataList>(File.ReadAllText(modFilename));
+        foreach(IoModuleData d in l.imdList){
+            addModuleData(d);
+        }
     }
 
     void saveModules(){
         string modFilename = Application.persistentDataPath + "/modules.json";
-        File.WriteAllText(modFilename,JsonUtility.ToJson(m_moduleData));
+        File.WriteAllText(modFilename,JsonUtility.ToJson(new IoModuleDataList(m_moduleData),true));
     }
 
     void onAddClick(){
@@ -117,34 +113,8 @@ public class IoManager : MonoBehaviour
     }
 
     void onSaveClick(){
-        saving = true;
-        List<string> inputNames = new List<string>(m_inputs.Count);
-        foreach(Io input in m_inputs){
-            inputNames.Add(input.ioName);
-        }
-        List<string> outputNames = new List<string>(m_outputs.Count);
-        foreach(Io output in m_outputs){
-            outputNames.Add(output.ioName);
-        }
-        TruthTable tt = new TruthTable(inputNames,outputNames);
-        IntBits ins = new IntBits(m_inputs.Count);
-        IntBits outs = new IntBits(m_outputs.Count);
-        for(int i = 0; i < tt.inputMax; ++i){
-            ins.value = i;
-            for(int y = 0; y < ins.count; ++y){
-                m_inputs[y].value = ins[y];
-            }
-            for(int z = 0; z < outs.count; ++z){
-                outs[z] = m_outputs[z].value;
-            }
-            tt.map(ins,outs);
-        }
-
-        IoModuleData data = new IoModuleData("New Module",tt);
-
-        Debug.Log(JsonUtility.ToJson(data));
-
-        saving = false;
+        
+        showNameDialog();
     }
 
     public void createInput()
@@ -299,6 +269,7 @@ public class IoManager : MonoBehaviour
             GameObject.Destroy(mod.gameObject);
         }
         m_modules.Clear();
+        clearWires();
     }
 
     public void showIoDialog(Io io)
@@ -316,6 +287,46 @@ public class IoManager : MonoBehaviour
         DialogRect.anchoredPosition = pos;
 
         manager.setIo(io);
+    }
+
+    public void showNameDialog(){
+        GameObject dialog = Instantiate(nameDialogPrefab, Vector3.zero, Quaternion.identity);
+        dialog.transform.SetParent(canvas.transform, false);
+    }
+
+    public void saveModule(string name){
+        saving = true;
+        List<string> inputNames = new List<string>(m_inputs.Count);
+        foreach(Io input in m_inputs){
+            inputNames.Add(input.ioName);
+        }
+        List<string> outputNames = new List<string>(m_outputs.Count);
+        foreach(Io output in m_outputs){
+            outputNames.Add(output.ioName);
+        }
+        TruthTable tt = new TruthTable(inputNames,outputNames);
+        IntBits ins = new IntBits(m_inputs.Count);
+        IntBits outs = new IntBits(m_outputs.Count);
+        for(int i = 0; i < tt.inputMax; ++i){
+            ins.value = i;
+            for(int y = 0; y < ins.count; ++y){
+                m_inputs[y].value = ins[y];
+            }
+            for(int z = 0; z < outs.count; ++z){
+                outs[z] = m_outputs[z].value;
+            }
+            tt.map(ins,outs);
+        }
+
+
+        //get module name here
+        IoModuleData data = new IoModuleData(name,tt);
+        addModuleData(data);
+        saveModules();
+
+
+        saving = false;
+        clear();
     }
 
     public void showModuleDialog(IoModule module)

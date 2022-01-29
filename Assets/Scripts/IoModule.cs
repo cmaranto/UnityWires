@@ -23,6 +23,16 @@ public class IoModuleData
         return string.Format("{0}\n{1}",ioName,truthTable);
     }
 }
+
+[Serializable]
+public class IoModuleDataList
+{
+    public List<IoModuleData> imdList;
+    public IoModuleDataList(List<IoModuleData> _list){
+        imdList = _list;
+    }
+}
+
 public class IoModule : MonoBehaviour
 {
 
