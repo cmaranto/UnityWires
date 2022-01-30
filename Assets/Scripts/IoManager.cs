@@ -104,7 +104,18 @@ public class IoManager : MonoBehaviour
     }
 
     void onInfoToggle(bool on){
-
+        clearDialogs();
+        if(on){
+            foreach(Io io in m_inputs){
+                showIoDialog(io);
+            }
+            foreach(Io io in m_outputs){
+                showIoDialog(io);
+            }
+            foreach(IoModule mod in m_modules){
+                showModuleDialog(mod);
+            }
+        }
     }
 
     void onAddClick(){
@@ -266,6 +277,7 @@ public class IoManager : MonoBehaviour
     }
 
     public void clear(){
+        clearDialogs();
         foreach(Io io in m_inputs){
             GameObject.Destroy(io.gameObject);
         }
@@ -377,6 +389,7 @@ public class IoManager : MonoBehaviour
     }
 
     public void removeIo(Io io){
+        removeDialog(io.gameObject);
         if(io.type == Io.Type.StaticInput){
             io.clearOutgoingConnections();
             m_inputs.Remove(io);
@@ -390,6 +403,7 @@ public class IoManager : MonoBehaviour
     }
 
     public void removeModule(IoModule module){
+        removeDialog(module.gameObject);
         module.removeConnections();
         m_modules.Remove(module);
         GameObject.Destroy(module.gameObject);
