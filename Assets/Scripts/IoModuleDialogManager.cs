@@ -1,10 +1,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 using TMPro;
 public class IoModuleDialogManager : MonoBehaviour
 {
+    public UnityEvent closeEvent = new UnityEvent();
     public TMP_Text moduleNameText;
     public TMP_Text truthTableText;
     public TMP_Text ioText;
@@ -37,7 +39,7 @@ public class IoModuleDialogManager : MonoBehaviour
     }
 
     void onClose(){
-        GameObject.Destroy(this.gameObject);
+        closeEvent.Invoke();
     }
 
     void onDelete(){

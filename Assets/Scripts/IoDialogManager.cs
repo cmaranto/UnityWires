@@ -1,11 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 using TMPro;
 
 public class IoDialogManager : MonoBehaviour
 {
+    public UnityEvent closeEvent = new UnityEvent();
     public TMP_InputField nameInput;
     public TMP_Text ioText;
     public Slider valueSlider;
@@ -55,7 +57,7 @@ public class IoDialogManager : MonoBehaviour
     }
 
     void onClose(){
-        GameObject.Destroy(this.gameObject);
+        closeEvent.Invoke();
     }
 
     void onDelete(){

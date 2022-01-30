@@ -151,6 +151,15 @@ public class TruthTable
         return val ? 1 : 0;
     }
 
+    public static TruthTable createNand(){
+        TruthTable tt = new TruthTable(new List<string>{"A","B"},new List<string>{"Output"});
+        tt.map(0,1);
+        tt.map(1,1);
+        tt.map(2,1);
+        tt.map(3,0);
+        return tt;
+    }
+
     public override string ToString()
     {
         StringBuilder sb = new StringBuilder();

@@ -33,12 +33,14 @@ public class IoManager : MonoBehaviour
 
     private List<IoModule> m_modules = new List<IoModule>();
     private List<IoModuleData> m_moduleData = new List<IoModuleData>();
+    private Dictionary<GameObject,GameObject> m_dialogs = new Dictionary<GameObject,GameObject>();
 
     public Button addButton;
     public TMP_Dropdown addOption;
     public Button saveButton;
     public Button clearButton;
     public bool saving = false;
+    public Toggle infoToggle;
 
     public static IoManager instance
     {
@@ -52,15 +54,12 @@ public class IoManager : MonoBehaviour
     void Start()
     {
         m_instance = this;
-
-        Debug.Log(Application.persistentDataPath);
-
         loadModules();
-        saveModules();
-
+        
         addButton.onClick.AddListener(onAddClick);
         saveButton.onClick.AddListener(onSaveClick);
         clearButton.onClick.AddListener(clear);
+        infoToggle.onValueChanged.AddListener(onInfoToggle);
 
         createInput();
         createOutput();
@@ -83,19 +82,29 @@ public class IoManager : MonoBehaviour
     void addModuleData(IoModuleData _data){
         m_moduleData.Add(_data);
         addOption.AddOptions(new List<string>{_data.ioName});
+        saveModules();
     }
 
     void loadModules(){
         string modFilename = Application.persistentDataPath + "/modules.json";
-        IoModuleDataList l = JsonUtility.FromJson<IoModuleDataList>(File.ReadAllText(modFilename));
-        foreach(IoModuleData d in l.imdList){
-            addModuleData(d);
+        if(File.Exists(modFilename)){
+            IoModuleDataList l = JsonUtility.FromJson<IoModuleDataList>(File.ReadAllText(modFilename));
+            foreach(IoModuleData d in l.imdList){
+                addModuleData(d);
+            }
+        }else{
+            //load defaults
+            addModuleData(new IoModuleData("NAND",TruthTable.createNand()));     
         }
     }
 
     void saveModules(){
         string modFilename = Application.persistentDataPath + "/modules.json";
         File.WriteAllText(modFilename,JsonUtility.ToJson(new IoModuleDataList(m_moduleData),true));
+    }
+
+    void onInfoToggle(bool on){
+
     }
 
     void onAddClick(){
@@ -272,8 +281,23 @@ public class IoManager : MonoBehaviour
         clearWires();
     }
 
+    void removeDialog(GameObject obj){
+        if(m_dialogs.ContainsKey(obj)){
+            GameObject.Destroy(m_dialogs[obj]);
+            m_dialogs.Remove(obj);
+        }
+    }
+
+    void clearDialogs(){
+        foreach(KeyValuePair<GameObject,GameObject> kvp in m_dialogs){
+            GameObject.Destroy(kvp.Value);
+        }
+        m_dialogs.Clear();
+    }
+
     public void showIoDialog(Io io)
     {
+        if(m_dialogs.ContainsKey(io.gameObject))return;
         GameObject dialog = Instantiate(ioDialogPrefab, Vector3.zero, Quaternion.identity);
         dialog.transform.SetParent(canvas.transform, false);
         IoDialogManager manager = dialog.GetComponent<IoDialogManager>();
@@ -287,6 +311,10 @@ public class IoManager : MonoBehaviour
         DialogRect.anchoredPosition = pos;
 
         manager.setIo(io);
+        manager.closeEvent.AddListener(() => {
+            removeDialog(io.gameObject);
+        });
+        m_dialogs.Add(io.gameObject,dialog);
     }
 
     public void showNameDialog(){
@@ -322,8 +350,6 @@ public class IoManager : MonoBehaviour
         //get module name here
         IoModuleData data = new IoModuleData(name,tt);
         addModuleData(data);
-        saveModules();
-
 
         saving = false;
         clear();
@@ -344,6 +370,10 @@ public class IoManager : MonoBehaviour
         DialogRect.anchoredPosition = pos;
 
         manager.setModule(module);
+        manager.closeEvent.AddListener(() => {
+            removeDialog(module.gameObject);
+        });
+        m_dialogs.Add(module.gameObject,dialog);
     }
 
     public void removeIo(Io io){
